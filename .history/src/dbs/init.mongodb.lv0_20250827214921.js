@@ -1,0 +1,7 @@
+'use strict'
+
+const mongoose = require('mongoose')
+
+const connectString = ''
+
+mongoose.connect(connectString).then( _ => console.log('Connect Mongo'))
