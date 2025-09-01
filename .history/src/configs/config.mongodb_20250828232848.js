@@ -4,7 +4,7 @@
 
 const dev = {
     app:{
-        port: process.env.DEV_APP_PORT || 3055
+        port: process.env.DEV_APP_PORT
     },
     db:{
         host: process.env.DEV_DB_HOST || 'localhost',
