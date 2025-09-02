@@ -1,7 +1,9 @@
 const mongoose = require('mongoose'); // Erase if already required
+const DOCUMENT_NAME = "Shop";
 
+const COLLECTION_NAME = "shops"
 // Declare the Schema of the Mongo model
-var userSchema = new mongoose.Schema({
+var shopSchema = new mongoose.Schema({
     name:{
         type:String,
         required:true,
@@ -13,11 +15,6 @@ var userSchema = new mongoose.Schema({
         required:true,
         trim:true,
     },
-    mobile:{
-        type:String,
-        required:true,
-        unique:true,
-    },
     password:{
         type:String,
         required:true,
@@ -28,14 +25,18 @@ var userSchema = new mongoose.Schema({
         default: 'inactive'
     },
     verify:{
-        type: Schema.Types.Boolean,
-        dafault: False
+        type: mongoose.Schema.Types.Boolean,
+        default: false
     },
     roles:{
         type: Array,
         default: []
-    }
+    },
+    
+},{
+    collection:COLLECTION_NAME,
+    timestamp: true,
 });
 
 //Export the model
-module.exports = mongoose.model('User', userSchema);
+module.exports = mongoose.model(DOCUMENT_NAME, shopSchema);
