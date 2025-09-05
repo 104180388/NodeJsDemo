@@ -2,6 +2,8 @@ const shopModel = require("../models/shop.model")
 const bcrypt = require("bcrypt")
 const crypto = require("crypto")
 const KeyTokenService = require("./keyToken.service")
+const {createTokenPair} = require("../auth/authUtils")
+
 
 const RoleShop = {
     SHOP: 'SHOP',
@@ -31,26 +33,27 @@ class AccessService{
                     
                 })
                 
-                console.log("helo")
+                
                 if(newShop){
-                    //created privateKey, publicKey
-                    const{privateKey,publicKey} = crypto.generateKeyPairSync('rsa',{
-                        modulusLength:4096
-                    })
 
+                    const privateKey = crypto.getRandomValues(64).toString('hex')
+                    const publicKey = crypto.getRandomValues(64).toString('hex')
+                    console.log("helo")
                     console.log({privateKey,publicKey}) //save collectionKeyStore
 
-                    const publicKeyString = await KeyTokenService.createKeyToken({
+                    const keyStore = await KeyTokenService.createKeyToken({
                         userId: newShop._id,
-                        publicKey
+                        publicKey,
+                        privateKey
                     })
 
-                    if(!publicKeyString){
+                    if(!keyStore){
                         return {
                             code: 'xxxx',
-                            message: 'publicKeyString error'
+                            message: 'keyStore error'
                         }
                     }
+
                     
                     const tokens = await createTokenPair({userId: newShop._id, email}, publicKey, privateKey)
                     console.log(`Created Token Success::`, tokens)
@@ -77,7 +80,7 @@ class AccessService{
                 return{
                     code: 'xxx',
                     message : error.message,
-                    statuc: 'error'
+                    status: 'error'
                 }
             }
         }
