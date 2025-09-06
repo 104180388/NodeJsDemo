@@ -16,7 +16,6 @@ class AccessService{
 
         static signUp = async ({name, email,password}) => {
             try{
-
                 const holderShop = await shopModel.findOne({email}).lean()
                 
                 if(holderShop){
@@ -33,19 +32,20 @@ class AccessService{
                     
                 })
                 
-                
                 if(newShop){
 
-                    const privateKey = crypto.getRandomValues(64).toString('hex')
-                    const publicKey = crypto.getRandomValues(64).toString('hex')
-                    console.log("helo")
-                    console.log({privateKey,publicKey}) //save collectionKeyStore
+                    const privateKey = crypto.randomBytes(64).toString('hex');
+                    const publicKey = crypto.randomBytes(64).toString('hex');
+                
+
+                    // console.log({privateKey,publicKey}) //save collectionKeyStore
 
                     const keyStore = await KeyTokenService.createKeyToken({
                         userId: newShop._id,
                         publicKey,
                         privateKey
                     })
+                    
 
                     if(!keyStore){
                         return {
@@ -53,7 +53,7 @@ class AccessService{
                             message: 'keyStore error'
                         }
                     }
-
+                    
                     
                     const tokens = await createTokenPair({userId: newShop._id, email}, publicKey, privateKey)
                     console.log(`Created Token Success::`, tokens)
@@ -75,7 +75,6 @@ class AccessService{
                 }
 
                 
-
             } catch(error){
                 return{
                     code: 'xxx',
