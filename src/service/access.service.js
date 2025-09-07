@@ -3,6 +3,7 @@ const bcrypt = require("bcrypt")
 const crypto = require("crypto")
 const KeyTokenService = require("./keyToken.service")
 const {createTokenPair} = require("../auth/authUtils")
+const { BadRequestError, ConflictRequestError } = require("../core/error.response")
 
 
 const RoleShop = {
@@ -19,10 +20,7 @@ class AccessService{
                 const holderShop = await shopModel.findOne({email}).lean()
                 
                 if(holderShop){
-                    return{
-                        code: 'xxxx',
-                        message: 'Shop already registered!',
-                    }
+                    throw new BadRequestError('Error: Shop already register!')
                 }
 
                 const passwordHash = await bcrypt.hash(password, 10)
@@ -54,7 +52,7 @@ class AccessService{
                         }
                     }
                     
-                    
+                    // const publicKeyObject = crypto.createPublicKey(keyStore)
                     const tokens = await createTokenPair({userId: newShop._id, email}, publicKey, privateKey)
                     console.log(`Created Token Success::`, tokens)
 
