@@ -3,7 +3,9 @@ const bcrypt = require("bcrypt")
 const crypto = require("crypto")
 const KeyTokenService = require("./keyToken.service")
 const {createTokenPair} = require("../auth/authUtils")
-const { BadRequestError, ConflictRequestError } = require("../core/error.response")
+const { BadRequestError, ConflictRequestError, AuthFailureError } = require("../core/error.response")
+const { findByEmail } = require("./shop.service")
+const { getInfoData } = require("../utils")
 
 
 const RoleShop = {
@@ -14,6 +16,45 @@ const RoleShop = {
 }
 
 class AccessService{
+        //1.check email 2.password 3. create access token va rt save trong db 4. general token 5. get data return login
+        
+        static login =async({email, password, refreshToken =null}) =>{
+
+            //1
+            const foundShop = await findByEmail({email})
+            if(!foundShop) throw new BadRequestError('Shop not registed!')
+            //2
+            const match = bcrypt.compare(password, foundShop.password)
+            if(!match) throw new AuthFailureError('Authen error')
+            //3
+            const { generateKeyPairSync } = require('crypto');
+                    const { publicKey, privateKey } = generateKeyPairSync('rsa', {
+                        modulusLength: 2048, 
+                        publicKeyEncoding: {
+                            type: 'spki',
+                            format: 'pem'
+                        },
+                        privateKeyEncoding: {
+                            type: 'pkcs8',
+                            format: 'pem'
+                        }
+                    });
+            //4
+            const { _id: userId} = foundShop
+            const tokens = await createTokenPair({userId, email}, publicKey, privateKey)
+
+            await KeyTokenService.createKeyToken({
+                refreshToken: tokens.refreshToken,
+                privateKey, publicKey, userId
+
+            })
+            
+            return {
+                shop: { _id: foundShop._id, name: foundShop.name },
+                tokens
+            }
+
+        }
 
         static signUp = async ({name, email,password}) => {
             try{
@@ -32,9 +73,18 @@ class AccessService{
                 
                 if(newShop){
 
-                    const privateKey = crypto.randomBytes(64).toString('hex');
-                    const publicKey = crypto.randomBytes(64).toString('hex');
-                
+                    const { generateKeyPairSync } = require('crypto');
+                    const { publicKey, privateKey } = generateKeyPairSync('rsa', {
+                        modulusLength: 2048, 
+                        publicKeyEncoding: {
+                            type: 'spki',
+                            format: 'pem'
+                        },
+                        privateKeyEncoding: {
+                            type: 'pkcs8',
+                            format: 'pem'
+                        }
+                    });
 
                     // console.log({privateKey,publicKey}) //save collectionKeyStore
 
@@ -55,9 +105,9 @@ class AccessService{
                     // const publicKeyObject = crypto.createPublicKey(keyStore)
                     const tokens = await createTokenPair({userId: newShop._id, email}, publicKey, privateKey)
                     console.log(`Created Token Success::`, tokens)
-
+                   
                     return {
-                        code:201,
+                        code: 201,
                         metadata: {
                             shop: newShop,
                             tokens
@@ -68,7 +118,7 @@ class AccessService{
                 }
 
                 return{
-                    code:200,
+                    code: 200,
                     metadata:null
                 }
 
