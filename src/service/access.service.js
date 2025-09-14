@@ -2,8 +2,8 @@ const shopModel = require("../models/shop.model")
 const bcrypt = require("bcrypt")
 const crypto = require("crypto")
 const KeyTokenService = require("./keyToken.service")
-const {createTokenPair} = require("../auth/authUtils")
-const { BadRequestError, ConflictRequestError, AuthFailureError } = require("../core/error.response")
+const {createTokenPair, verifyJWT} = require("../auth/authUtils")
+const { BadRequestError, ConflictRequestError, AuthFailureError, ForbiddenError } = require("../core/error.response")
 const { findByEmail } = require("./shop.service")
 const { getInfoData } = require("../utils")
 
@@ -16,29 +16,79 @@ const RoleShop = {
 }
 
 class AccessService{
+    //check token used
+        static handlerRefreshToken = async (refreshToken)=>{
+            const foundToken = await KeyTokenService.findByRefreshTokenUsed(refreshToken)
+            if(foundToken){
+                // decode xem no la ai
+                const {userId, email} = await verifyJWT(refreshToken, foundToken.privateKey)
+                console.log({userId, email})
+                //xoas
+                await KeyTokenService.deleteKeyById(userId)
+                throw new ForbiddenError('Something wrong happened !! Pls relogin')
+            }
+
+            //Neu ko co
+            const holderToken = await KeyTokenService.findByRefreshToken(refreshToken)
+            if(!holderToken) throw new AuthFailureError('Shop not registed 1')
+            
+            //verify token
+            const {userId,email} = await verifyJWT(refreshToken, holderToken.privateKey)
+            console.log('[2]--', {userId, email})
+            //check Userid
+            const foundShop = await findByEmail({email})
+            if(!foundShop) throw new AuthFailureError('Shop not registed 2')
+            
+            // create 1 cap moi
+            const tokens = await createTokenPair({userId, email}, holderToken.publicKey, holderToken.privateKey)
+
+            //update token
+            await holderToken.update({
+                $set:{
+                    refreshToken: tokens.refreshToken
+                },
+                $addToSet:{
+                    refreshTokenUsed: refreshToken //da dc su dung de lay token moi
+                }
+            })
+
+            return{
+                user: {userId,email},
+                tokens
+            }
+        }
+
+        static logout = async(keyStore)=>{
+            const delKey = await KeyTokenService.removeKeyById(keyStore._id)
+            console.log(delKey)
+            return delKey = await KeyTokenService
+        }
+
+
         //1.check email 2.password 3. create access token va rt save trong db 4. general token 5. get data return login
         
-        static login =async({email, password, refreshToken =null}) =>{
+        static login = async({email, password, refreshToken =null}) =>{
 
             //1
             const foundShop = await findByEmail({email})
             if(!foundShop) throw new BadRequestError('Shop not registed!')
             //2
-            const match = bcrypt.compare(password, foundShop.password)
+            const match = await bcrypt.compare(password, foundShop.password)
+ 
             if(!match) throw new AuthFailureError('Authen error')
             //3
             const { generateKeyPairSync } = require('crypto');
-                    const { publicKey, privateKey } = generateKeyPairSync('rsa', {
-                        modulusLength: 2048, 
-                        publicKeyEncoding: {
-                            type: 'spki',
-                            format: 'pem'
-                        },
-                        privateKeyEncoding: {
-                            type: 'pkcs8',
-                            format: 'pem'
-                        }
-                    });
+            const { publicKey, privateKey } = generateKeyPairSync('rsa', {
+                modulusLength: 2048, 
+                publicKeyEncoding: {
+                    type: 'spki',
+                    format: 'pem'
+                },
+                privateKeyEncoding: {
+                    type: 'pkcs8',
+                    format: 'pem'
+                }
+            });
             //4
             const { _id: userId} = foundShop
             const tokens = await createTokenPair({userId, email}, publicKey, privateKey)
@@ -50,7 +100,7 @@ class AccessService{
             })
             
             return {
-                shop: { _id: foundShop._id, name: foundShop.name },
+                shop: { _id: foundShop._id, name: foundShop.name, email:foundShop.email },
                 tokens
             }
 

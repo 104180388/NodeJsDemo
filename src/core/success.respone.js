@@ -4,8 +4,8 @@ const StatusCode = {
 }
 
 const ReasonStatusCode = {
-    OK: 'Created!',
-    CREATED: 'Success'
+    OK: 'Success',
+    CREATED: 'Created!'
 }
 
 class SuccessResponse{
