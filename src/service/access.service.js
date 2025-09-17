@@ -21,6 +21,7 @@ class AccessService{
             const foundToken = await KeyTokenService.findByRefreshTokenUsed(refreshToken)
             if(foundToken){
                 // decode xem no la ai
+                
                 const {userId, email} = await verifyJWT(refreshToken, foundToken.privateKey)
                 console.log({userId, email})
                 //xoas
@@ -35,6 +36,7 @@ class AccessService{
             //verify token
             const {userId,email} = await verifyJWT(refreshToken, holderToken.privateKey)
             console.log('[2]--', {userId, email})
+
             //check Userid
             const foundShop = await findByEmail({email})
             if(!foundShop) throw new AuthFailureError('Shop not registed 2')
@@ -43,7 +45,9 @@ class AccessService{
             const tokens = await createTokenPair({userId, email}, holderToken.publicKey, holderToken.privateKey)
             
             //update token
-            await holderToken.update({
+            
+            await holderToken.updateOne({
+                
                 $set:{
                     refreshToken: tokens.refreshToken,
                     accessToken: tokens.accessToken,
