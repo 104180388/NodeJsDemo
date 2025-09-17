@@ -41,11 +41,12 @@ class AccessService{
             
             // create 1 cap moi
             const tokens = await createTokenPair({userId, email}, holderToken.publicKey, holderToken.privateKey)
-
+            
             //update token
             await holderToken.update({
                 $set:{
-                    refreshToken: tokens.refreshToken
+                    refreshToken: tokens.refreshToken,
+                    accessToken: tokens.accessToken,
                 },
                 $addToSet:{
                     refreshTokenUsed: refreshToken //da dc su dung de lay token moi
@@ -59,6 +60,8 @@ class AccessService{
         }
 
         static logout = async(keyStore)=>{
+            console.log(20)
+            console.log(keyStore)
             const delKey = await KeyTokenService.removeKeyById(keyStore._id)
             console.log({delKey})
             return delKey
