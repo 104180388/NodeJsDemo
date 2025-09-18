@@ -32,6 +32,10 @@ class Product {
         this.product_attributes = product_attributes
         this.product_quantity = product_quantity
     }
+
+    async createProduct(){
+        return await product.create(this)
+    }
 }
 
 
