@@ -6,6 +6,7 @@ const { createTokenPair, verifyJWT } = require("../auth/authUtils")
 const { BadRequestError, ConflictRequestError, AuthFailureError, ForbiddenError } = require("../core/error.response")
 const { findByEmail } = require("./shop.service")
 const { getInfoData } = require("../utils")
+const keytokenModel = require("../models/keytoken.model")
 
 
 const RoleShop = {
@@ -17,9 +18,8 @@ const RoleShop = {
 
 class AccessService {
     
-    static handlerRefreshTokenV2 = async ({keyStore,user,refreshToken}) => {
+    static handlerRefreshTokenV2 = async ({user,keyStore,refreshToken}) => {
         const { userId, email } = user;
-        console.log(refreshToken)
         if(keyStore.refreshTokensUsed.includes(refreshToken)){
             await KeyTokenService.deleteKeyById(userId)
             throw new ForbiddenError('Something wrong happened !! Pls relogin')
@@ -34,16 +34,18 @@ class AccessService {
 
         //update token
 
-        await keyStore.updateOne({
+        await keytokenModel.updateOne({user:userId},{
 
             $set: {
                 refreshToken: tokens.refreshToken,
                 accessToken: tokens.accessToken,
             },
             $addToSet: {
-                refreshTokenUsed: refreshToken //da dc su dung de lay token moi
+                refreshTokensUsed: refreshToken //da dc su dung de lay token moi
             }
         })
+
+        
 
         return {
             user,
@@ -178,12 +180,19 @@ class AccessService {
                     }
                 });
 
+                // const publicKeyObject = crypto.createPublicKey(keyStore)
+                const tokens = await createTokenPair({ userId: newShop._id, email }, publicKey, privateKey)
+                const {accessToken, refreshToken} = tokens
+                console.log(`Created Token Success::`, tokens)
+
                 // console.log({privateKey,publicKey}) //save collectionKeyStore
 
                 const keyStore = await KeyTokenService.createKeyToken({
                     userId: newShop._id,
                     publicKey,
-                    privateKey
+                    privateKey,
+                    refreshToken, 
+                    accessToken
                 })
 
 
@@ -194,9 +203,7 @@ class AccessService {
                     }
                 }
 
-                // const publicKeyObject = crypto.createPublicKey(keyStore)
-                const tokens = await createTokenPair({ userId: newShop._id, email }, publicKey, privateKey)
-                console.log(`Created Token Success::`, tokens)
+                
 
                 return {
                     code: 201,
